@@ -1,0 +1,142 @@
+// TaskMaster Pro - Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model with gamification
+model User {
+  id                String   @id @default(cuid())
+  username          String   @unique
+  email             String?  @unique
+  password          String
+  avatar            String?
+  refreshTokenHash  String?
+
+  // Gamification
+  xp                Int      @default(0)
+  level             Int      @default(1)
+  streakCurrent     Int      @default(0)
+  streakBest        Int      @default(0)
+  lastActivityDate  DateTime?
+  achievements      String   @default("[]") // JSON array of achievement IDs
+
+  // Preferences (JSON)
+  preferences       String   @default("{}")
+
+  tasks             Task[]
+  projects          Project[]
+  pushSubscriptions PushSubscription[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([username])
+  @@index([email])
+}
+
+// Task model with full support
+model Task {
+  id               String   @id @default(cuid())
+  ownerId          String
+  projectId        String?
+
+  title            String
+  description      String?
+  status           String   @default("inbox") // inbox | todo | doing | review | done
+  priority         String   @default("medium") // low | medium | high | urgent
+  dueDate          DateTime?
+  dueTime          String?
+  estimatedMinutes Int?
+  actualMinutes    Int?
+
+  // Tags - comma-separated IDs
+  tags             String   @default("")
+
+  // LexoRank for ordering
+  position         String
+
+  // Subtasks (JSON array)
+  subtasks         String   @default("[]")
+
+  // Reminders (JSON array)
+  reminders        String   @default("[]")
+
+  // Recurring (JSON object)
+  recurring        String?
+
+  // Pomodoros
+  pomodorosUsed    Int      @default(0)
+
+  notes            String?
+  completedAt      DateTime?
+  deletedAt        DateTime?
+
+  // XP reward calculated on creation
+  xpReward         Int      @default(0)
+
+  project          Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([ownerId, status, position])
+  @@index([ownerId, dueDate])
+  @@index([ownerId, deletedAt, updatedAt])
+  @@index([projectId])
+}
+
+// Project model
+model Project {
+  id          String   @id @default(cuid())
+  ownerId     String
+  name        String
+  emoji       String
+  color       String
+  description String?
+  deadline    DateTime?
+  status      String   @default("active") // active | on-hold | completed | archived
+
+  tasks       Task[]
+
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+// Tag model
+model Tag {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  color     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+// Push subscription for notifications
+model PushSubscription {
+  id             String   @id @default(cuid())
+  userId         String
+  endpoint       String   @unique
+  keys           String   // JSON object with p256dh and auth
+  expirationTime DateTime?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
