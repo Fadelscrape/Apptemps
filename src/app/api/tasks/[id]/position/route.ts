@@ -3,8 +3,9 @@ import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/api-utils';
 
 // PATCH /api/tasks/[id]/position - Update task position
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -35,7 +36,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const existingTask = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -49,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     await db.task.update({
-      where: { id: params.id },
+      where: { id },
       data: { position },
     });
 

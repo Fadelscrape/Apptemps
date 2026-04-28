@@ -3,8 +3,9 @@ import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/api-utils';
 
 // GET /api/projects/[id] - Get single project
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const project = await db.project.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
       },
       include: {
@@ -63,8 +64,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PUT /api/projects/[id] - Update project
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -88,7 +90,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const existingProject = await db.project.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
       },
     });
@@ -109,7 +111,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (status !== undefined) updateData.status = status;
 
     const project = await db.project.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 
@@ -128,8 +130,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/projects/[id] - Archive project
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -150,7 +153,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     const existingProject = await db.project.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
       },
     });
@@ -163,7 +166,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await db.project.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'archived' },
     });
 

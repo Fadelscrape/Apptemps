@@ -3,8 +3,9 @@ import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/api-utils';
 
 // POST /api/tasks/[id]/subtasks - Add subtask
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const existingTask = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     subtasks.push(newSubtask);
 
     const task = await db.task.update({
-      where: { id: params.id },
+      where: { id },
       data: { subtasks: JSON.stringify(subtasks) },
       include: {
         project: true,

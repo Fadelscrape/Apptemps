@@ -4,8 +4,9 @@ import { verifyToken, calculateXP, getLevel } from '@/lib/api-utils';
 import { ACHIEVEMENTS } from '@/types';
 
 // PATCH /api/tasks/[id]/complete - Complete task with XP and streak
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -26,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const existingTask = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -102,7 +103,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     // Update task
     const task = await db.task.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: 'done',
         completedAt: new Date(),

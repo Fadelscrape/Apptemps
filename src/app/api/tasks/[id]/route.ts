@@ -16,8 +16,9 @@ async function authenticate(req: NextRequest) {
 }
 
 // GET /api/tasks/[id] - Get single task
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const payload = await authenticate(req);
     if (!payload) {
       return NextResponse.json(
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const task = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -66,8 +67,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PUT /api/tasks/[id] - Update task
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const payload = await authenticate(req);
     if (!payload) {
       return NextResponse.json(
@@ -96,7 +98,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const existingTask = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -127,7 +129,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (notes !== undefined) updateData.notes = notes;
 
     const task = await db.task.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         project: true,
@@ -157,8 +159,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/tasks/[id] - Soft delete task
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const payload = await authenticate(req);
     if (!payload) {
       return NextResponse.json(
@@ -169,7 +172,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     const existingTask = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -183,7 +186,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     await db.task.update({
-      where: { id: params.id },
+      where: { id },
       data: { deletedAt: new Date() },
     });
 

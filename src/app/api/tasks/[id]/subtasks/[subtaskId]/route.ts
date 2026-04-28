@@ -3,8 +3,9 @@ import { db } from '@/lib/db';
 import { verifyToken } from '@/lib/api-utils';
 
 // PATCH /api/tasks/[id]/subtasks/[subtaskId] - Toggle subtask
-export async function PATCH(req: NextRequest, { params }: { params: { id: string; subtaskId: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string; subtaskId: string }> }) {
   try {
+    const { id, subtaskId } = await params;
     const authHeader = req.headers.get('authorization');
     const accessToken = authHeader?.replace('Bearer ', '');
 
@@ -25,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const existingTask = await db.task.findFirst({
       where: {
-        id: params.id,
+        id,
         ownerId: payload.userId,
         deletedAt: null,
       },
@@ -39,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     const subtasks = existingTask.subtasks ? JSON.parse(existingTask.subtasks) : [];
-    const subtaskIndex = subtasks.findIndex((st: any) => st.id === params.subtaskId);
+    const subtaskIndex = subtasks.findIndex((st: any) => st.id === subtaskId);
 
     if (subtaskIndex === -1) {
       return NextResponse.json(
@@ -51,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     subtasks[subtaskIndex].done = !subtasks[subtaskIndex].done;
 
     const task = await db.task.update({
-      where: { id: params.id },
+      where: { id },
       data: { subtasks: JSON.stringify(subtasks) },
       include: {
         project: true,
