@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
 import { useTaskStore } from '@/store/taskStore';
 import { useUIStore } from '@/store/uiStore';
@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 import {
   Home,
   Kanban,
@@ -27,15 +28,34 @@ import {
   Moon,
   Sun,
   Zap,
+  X,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { XP_LEVELS } from '@/types';
+import KanbanPage from './KanbanPage';
+import CalendarPage from './CalendarPage';
+import AnalyticsPage from './AnalyticsPage';
+import FocusPage from './FocusPage';
+import SettingsPage from './SettingsPage';
+
+type ViewType = 'dashboard' | 'kanban' | 'calendar' | 'analytics' | 'focus' | 'settings';
+
+const VIEW_CONFIG: Record<
+  ViewType,
+  { icon: any; label: string; component: React.ReactNode }
+> = {
+  dashboard: { icon: Home, label: "Aujourd'hui", component: null },
+  kanban: { icon: Kanban, label: 'Kanban', component: <KanbanPage /> },
+  calendar: { icon: Calendar, label: 'Calendrier', component: <CalendarPage /> },
+  analytics: { icon: BarChart3, label: 'Analytics', component: <AnalyticsPage /> },
+  focus: { icon: Clock, label: 'Focus', component: <FocusPage /> },
+  settings: { icon: Settings, label: 'Paramètres', component: <SettingsPage /> },
+};
 
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const { tasks, isLoading, fetchTodayTasks, completeTask, deleteTask } = useTaskStore();
-  const { sidebarOpen, toggleSidebar, theme, setTheme } = useUIStore();
-  const [view, setView] = useState<'dashboard' | 'kanban' | 'calendar' | 'analytics' | 'focus'>('dashboard');
+  const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
+  const [view, setView] = useState<ViewType>('dashboard');
 
   useEffect(() => {
     if (user) {
@@ -84,7 +104,9 @@ export default function Dashboard() {
 
   const getTasksByTimeOfDay = () => {
     const now = new Date();
-    const todayTasks = tasks.filter((t) => t.dueDate && new Date(t.dueDate).toDateString() === now.toDateString());
+    const todayTasks = tasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate).toDateString() === now.toDateString()
+    );
 
     return {
       overdue: tasks.filter((t) => t.dueDate && new Date(t.dueDate) < now && t.status !== 'done'),
@@ -181,6 +203,63 @@ export default function Dashboard() {
     </motion.div>
   );
 
+  // If viewing a full page component
+  if (view !== 'dashboard' && VIEW_CONFIG[view]?.component) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+        {/* Sidebar - Collapsed for full pages */}
+        <aside
+          className={`${
+            sidebarOpen ? 'w-20' : 'w-16'
+          } bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}
+        >
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1 py-4">
+            <nav className="space-y-1 px-2">
+              {Object.entries(VIEW_CONFIG).map(([key, config]) => (
+                <button
+                  key={key}
+                  onClick={() => setView(key as ViewType)}
+                  className={`w-full flex items-center justify-center p-3 rounded-lg transition-colors ${
+                    view === key
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                  title={config.label}
+                >
+                  <config.icon className="w-5 h-5" />
+                </button>
+              ))}
+            </nav>
+          </ScrollArea>
+
+          <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center p-3 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              title="Déconnexion"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-hidden">
+          {VIEW_CONFIG[view]?.component}
+        </main>
+      </div>
+    );
+  }
+
+  // Dashboard view
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       {/* Sidebar */}
@@ -207,6 +286,7 @@ export default function Dashboard() {
             <SidebarItem icon={Calendar} label="Calendrier" active={view === 'calendar'} onClick={() => setView('calendar')} />
             <SidebarItem icon={BarChart3} label="Analytics" active={view === 'analytics'} onClick={() => setView('analytics')} />
             <SidebarItem icon={Clock} label="Focus" active={view === 'focus'} onClick={() => setView('focus')} />
+            <SidebarItem icon={Settings} label="Paramètres" active={view === 'settings'} onClick={() => setView('settings')} />
           </nav>
         </ScrollArea>
 
@@ -245,8 +325,15 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  // Toggle theme (simplified)
+                  toast.info('Mode sombre/clair à implémenter');
+                }}
+              >
+                <Moon className="w-5 h-5" />
               </Button>
             </div>
           </div>
@@ -274,7 +361,9 @@ export default function Dashboard() {
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Streak actuel</p>
                     <p className="text-3xl font-bold text-orange-600">{user?.streakCurrent}</p>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs mt-2">Meilleur: {user?.streakBest} jours</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs mt-2">
+                      Meilleur: {user?.streakBest} jours
+                    </p>
                   </div>
                   <Flame className="w-10 h-10 text-orange-500" />
                 </div>
