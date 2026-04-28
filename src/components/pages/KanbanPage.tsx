@@ -236,7 +236,7 @@ export default function KanbanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+    <div className="flex-1 flex overflow-hidden bg-gray-50 dark:bg-gray-950">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
