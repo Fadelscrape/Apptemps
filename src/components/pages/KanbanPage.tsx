@@ -163,7 +163,7 @@ export default function KanbanPage() {
           <div className="space-y-2">
             <div className="flex items-start justify-between gap-2">
               <h4 className="font-medium text-sm flex-1 line-clamp-2">{task.title}</h4>
-              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-100 md:opacity-0 md:group-hover:opacity-100">
                 <MoreHorizontal className="h-3 w-3" />
               </Button>
             </div>
@@ -244,13 +244,13 @@ export default function KanbanPage() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex-1 p-6 overflow-x-auto">
-          <div className="flex gap-6 h-full min-w-max">
+        <div className="flex-1 p-3 sm:p-6 overflow-x-auto">
+          <div className="flex gap-3 sm:gap-6 h-full min-w-max snap-x snap-mandatory">
             {COLUMNS.map((column) => {
               const columnTasks = getTasksByStatus(column.id);
 
               return (
-                <div key={column.id} className="flex-shrink-0 w-80">
+                <div key={column.id} className="flex-shrink-0 w-[280px] sm:w-80 snap-start">
                   <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-full">
                     {/* Column Header */}
                     <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
@@ -291,7 +291,7 @@ export default function KanbanPage() {
         {/* Drag Overlay */}
         <DragOverlay>
           {activeTask ? (
-            <Card className="p-4 w-80 bg-white dark:bg-gray-900 shadow-2xl rotate-2">
+            <Card className="p-4 w-[280px] sm:w-80 bg-white dark:bg-gray-900 shadow-2xl rotate-2">
               <h4 className="font-medium">{activeTask.title}</h4>
             </Card>
           ) : null}

@@ -23,12 +23,10 @@ import {
   CheckCircle2,
   Flame,
   Star,
-  ChevronRight,
   LayoutDashboard,
   Moon,
-  Sun,
   Zap,
-  X,
+  Trash2,
 } from 'lucide-react';
 import { XP_LEVELS } from '@/types';
 import KanbanPage from './KanbanPage';
@@ -195,13 +193,31 @@ export default function Dashboard() {
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(task.id)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600"
           >
-            <ChevronRight className="w-4 h-4 rotate-90" />
+            <Trash2 className="w-4 h-4" />
           </Button>
         </div>
       </Card>
     </motion.div>
+  );
+
+  // Mobile bottom navigation
+  const MobileNav = () => (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center justify-around px-2 py-2 safe-area-bottom">
+      {Object.entries(VIEW_CONFIG).map(([key, config]) => (
+        <button
+          key={key}
+          onClick={() => setView(key as ViewType)}
+          className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
+            view === key ? 'text-purple-600' : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          <config.icon className="w-5 h-5" />
+          <span className="text-[10px] font-medium">{config.label}</span>
+        </button>
+      ))}
+    </nav>
   );
 
   // If viewing a full page component
@@ -209,12 +225,8 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
         <TaskModal />
-        {/* Sidebar - Collapsed for full pages */}
-        <aside
-          className={`${
-            sidebarOpen ? 'w-20' : 'w-16'
-          } bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}
-        >
+        {/* Sidebar - Desktop only */}
+        <aside className="hidden md:flex md:flex-col w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300">
           <div className="p-4 border-b border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-center">
               <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
@@ -254,9 +266,11 @@ export default function Dashboard() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden">
+        <main className="flex-1 overflow-hidden pb-16 md:pb-0">
           {VIEW_CONFIG[view]?.component}
         </main>
+
+        <MobileNav />
       </div>
     );
   }
@@ -265,9 +279,9 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       <TaskModal />
-      {/* Sidebar */}
+      {/* Sidebar - Desktop only */}
       <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}
+        className={`hidden md:flex md:flex-col ${sidebarOpen ? 'md:w-64' : 'md:w-20'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300`}
       >
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
@@ -305,19 +319,19 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col pb-16 md:pb-0">
         {/* Top Bar */}
-        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="hidden md:flex" onClick={toggleSidebar}>
                 <LayoutDashboard className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-gray-100">
                   Bonjour, {user?.username} ! 👋
                 </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   {new Date().toLocaleDateString('fr-FR', {
                     weekday: 'long',
                     day: 'numeric',
@@ -327,14 +341,11 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
-                  // Toggle theme (simplified)
-                  toast.info('Mode sombre/clair à implémenter');
-                }}
+                onClick={() => toast.info('Mode sombre/clair à implémenter')}
               >
                 <Moon className="w-5 h-5" />
               </Button>
@@ -344,9 +355,9 @@ export default function Dashboard() {
 
         {/* Dashboard Content */}
         <ScrollArea className="flex-1">
-          <div className="p-6 max-w-6xl mx-auto">
+          <div className="p-4 sm:p-6 max-w-6xl mx-auto">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
               <Card className="p-6 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
                 <div className="flex items-center justify-between">
                   <div>
@@ -486,6 +497,8 @@ export default function Dashboard() {
           </div>
         </ScrollArea>
       </main>
+
+      <MobileNav />
     </div>
   );
 }

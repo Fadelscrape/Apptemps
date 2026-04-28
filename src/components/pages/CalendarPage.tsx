@@ -16,6 +16,7 @@ import {
   Calendar as CalendarIcon,
   Clock,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 import { Task } from '@/types';
 
@@ -133,7 +134,7 @@ export default function CalendarPage() {
 
   const CalendarDay = ({ date, index }: { date: Date | null; index: number }) => {
     if (!date) {
-      return <div className="h-28 bg-gray-50 dark:bg-gray-900/50 rounded-lg" />;
+      return <div className="h-14 sm:h-28 bg-gray-50 dark:bg-gray-900/50 rounded-lg" />;
     }
 
     const dayTasks = getTasksForDate(date);
@@ -148,7 +149,7 @@ export default function CalendarPage() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: index * 0.01 }}
         onClick={() => handleDateClick(date)}
-        className={`h-28 p-2 rounded-lg cursor-pointer transition-all duration-200 ${
+        className={`h-14 sm:h-28 p-1 sm:p-2 rounded-lg cursor-pointer transition-all duration-200 ${
           isToday(date)
             ? 'bg-purple-100 dark:bg-purple-900/30 ring-2 ring-purple-500'
             : dayTasks.length > 0
@@ -268,9 +269,9 @@ export default function CalendarPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(task.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600"
                   >
-                    <Clock className="w-4 h-4 rotate-90" />
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </Card>
@@ -282,37 +283,37 @@ export default function CalendarPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-3 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <CalendarIcon className="w-8 h-8 text-purple-600" />
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <CalendarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Calendrier</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Calendrier</h1>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 {currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={goToToday}>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="outline" size="sm" onClick={goToToday} className="text-xs sm:text-sm">
               Aujourd'hui
             </Button>
             <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             <Button variant="outline" size="icon" onClick={goToNextMonth}>
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </div>
         </div>
 
         {/* Calendar Grid */}
-        <Card className="p-6">
+        <Card className="p-2 sm:p-6">
           {/* Day Names */}
-          <div className="grid grid-cols-7 gap-2 mb-4">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-4">
             {DAY_NAMES.map((day) => (
               <div key={day} className="text-center text-sm font-medium text-gray-500 dark:text-gray-400">
                 {day}
@@ -321,7 +322,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Days */}
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {getMonthData().map((date, index) => (
               <CalendarDay key={index} date={date} index={index} />
             ))}
@@ -334,7 +335,7 @@ export default function CalendarPage() {
             open={!!selectedDate}
             onOpenChange={(open) => !open && setSelectedDate(null)}
           >
-            <SheetContent side="right" className="w-[400px]">
+            <SheetContent side="right" className="w-full sm:w-[400px]">
               <SheetHeader>
                 <SheetTitle>
                   {selectedDate.toLocaleDateString('fr-FR', {
