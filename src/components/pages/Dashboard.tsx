@@ -266,7 +266,7 @@ export default function Dashboard() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-hidden pb-16 md:pb-0">
+        <main className="flex-1 flex flex-col overflow-hidden pb-16 md:pb-0">
           {VIEW_CONFIG[view]?.component}
         </main>
 

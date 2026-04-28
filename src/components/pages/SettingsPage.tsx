@@ -162,44 +162,43 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="bg-gray-50 dark:bg-gray-950 p-4 sm:p-6 overflow-y-auto h-full">
+      <div className="max-w-4xl mx-auto pb-4">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Paramètres</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">Paramètres</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Gérez votre compte et vos préférences
           </p>
         </div>
 
         {/* User Stats Card */}
-        <Card className="p-6 mb-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl">
+        <Card className="p-4 sm:p-6 mb-6 bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 sm:w-20 sm:h-20 flex-shrink-0 bg-white/20 rounded-full flex items-center justify-center text-2xl sm:text-4xl">
               {avatar || user?.username?.charAt(0).toUpperCase() || '?'}
             </div>
-            <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-2">{user?.username}</h2>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  <span>Niveau {user?.level}</span>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-2xl font-bold mb-1 truncate">{user?.username}</h2>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                <div className="flex items-center gap-1">
+                  <Zap className="w-4 h-4 flex-shrink-0" />
+                  <span>Niv. {user?.level}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Flame className="w-5 h-5" />
-                  <span>{user?.streakCurrent} jours streak</span>
+                <div className="flex items-center gap-1">
+                  <Flame className="w-4 h-4 flex-shrink-0" />
+                  <span>{user?.streakCurrent}j streak</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5" />
-                  <span>{user?.achievements?.length || 0} achievements</span>
+                <div className="flex items-center gap-1">
+                  <Award className="w-4 h-4 flex-shrink-0" />
+                  <span>{user?.achievements?.length || 0} badges</span>
                 </div>
               </div>
             </div>
           </div>
         </Card>
 
-        <ScrollArea className="h-[calc(100vh-350px)]">
-          <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Profile Section */}
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -283,7 +282,7 @@ export default function SettingsPage() {
                 Pomodoro
               </h3>
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="work">Travail (min)</Label>
                     <Input
@@ -403,7 +402,6 @@ export default function SettingsPage() {
               </Button>
             </Card>
           </div>
-        </ScrollArea>
       </div>
     </div>
   );
