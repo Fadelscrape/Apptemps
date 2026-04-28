@@ -1,6 +1,15 @@
 // Project Store - Zustand
 import { create } from 'zustand';
 import type { Project, ProjectInput } from '@/types';
+import { useAuthStore } from './authStore';
+
+function authHeaders(): Record<string, string> {
+  const token = useAuthStore.getState().accessToken;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 interface ProjectState {
   // State
@@ -33,7 +42,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProjects: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch('/api/projects');
+      const res = await fetch('/api/projects', { headers: authHeaders() });
       if (!res.ok) throw new Error('Erreur lors du chargement des projets');
 
       const data = await res.json();
@@ -48,7 +57,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProject: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`/api/projects/${id}`);
+      const res = await fetch(`/api/projects/${id}`, { headers: authHeaders() });
       if (!res.ok) throw new Error('Erreur lors du chargement du projet');
 
       const data = await res.json();
@@ -68,7 +77,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -94,7 +103,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -127,6 +136,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     try {
       const res = await fetch(`/api/projects/${id}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       });
 
       if (!res.ok) {

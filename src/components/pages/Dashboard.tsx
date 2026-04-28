@@ -27,6 +27,7 @@ import {
   Moon,
   Zap,
   Trash2,
+  FolderOpen,
 } from 'lucide-react';
 import { XP_LEVELS } from '@/types';
 import KanbanPage from './KanbanPage';
@@ -34,9 +35,10 @@ import CalendarPage from './CalendarPage';
 import AnalyticsPage from './AnalyticsPage';
 import FocusPage from './FocusPage';
 import SettingsPage from './SettingsPage';
+import ProjectsPage from './ProjectsPage';
 import TaskModal from '@/components/TaskModal';
 
-type ViewType = 'dashboard' | 'kanban' | 'calendar' | 'analytics' | 'focus' | 'settings';
+type ViewType = 'dashboard' | 'kanban' | 'calendar' | 'analytics' | 'focus' | 'projects' | 'settings';
 
 const VIEW_CONFIG: Record<
   ViewType,
@@ -47,6 +49,7 @@ const VIEW_CONFIG: Record<
   calendar: { icon: Calendar, label: 'Calendrier', component: <CalendarPage /> },
   analytics: { icon: BarChart3, label: 'Analytics', component: <AnalyticsPage /> },
   focus: { icon: Clock, label: 'Focus', component: <FocusPage /> },
+  projects: { icon: FolderOpen, label: 'Projets', component: <ProjectsPage /> },
   settings: { icon: Settings, label: 'Paramètres', component: <SettingsPage /> },
 };
 
@@ -204,19 +207,21 @@ export default function Dashboard() {
 
   // Mobile bottom navigation
   const MobileNav = () => (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex items-center justify-around px-2 py-2 safe-area-bottom">
-      {Object.entries(VIEW_CONFIG).map(([key, config]) => (
-        <button
-          key={key}
-          onClick={() => setView(key as ViewType)}
-          className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-colors ${
-            view === key ? 'text-purple-600' : 'text-gray-500 dark:text-gray-400'
-          }`}
-        >
-          <config.icon className="w-5 h-5" />
-          <span className="text-[10px] font-medium">{config.label}</span>
-        </button>
-      ))}
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 overflow-x-auto">
+      <div className="flex items-center min-w-max px-1 py-2 mx-auto">
+        {Object.entries(VIEW_CONFIG).map(([key, config]) => (
+          <button
+            key={key}
+            onClick={() => setView(key as ViewType)}
+            className={`flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-colors flex-shrink-0 ${
+              view === key ? 'text-purple-600' : 'text-gray-500 dark:text-gray-400'
+            }`}
+          >
+            <config.icon className="w-5 h-5" />
+            <span className="text-[10px] font-medium whitespace-nowrap">{config.label}</span>
+          </button>
+        ))}
+      </div>
     </nav>
   );
 
