@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 配置项
-ROOT_DIR="/home/z/my-project/mini-services"
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)/mini-services"
 DIST_DIR="/tmp/build_fullstack_$BUILD_ID/mini-services-dist"
 
 main() {
@@ -46,9 +46,10 @@ main() {
             # 使用 bun build CLI 构建
             output_file="$DIST_DIR/mini-service-$project_name.js"
             
-            if bun build "$entry_path" \
-                --outfile "$output_file" \
-                --target bun \
+            if npx esbuild "$entry_path" \
+                --bundle \
+                --outfile="$output_file" \
+                --platform=node \
                 --minify; then
                 echo "✅ $project_name 构建成功 -> $output_file"
                 success_count=$((success_count + 1))

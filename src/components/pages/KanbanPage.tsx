@@ -18,6 +18,7 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { useAuthStore } from '@/store/authStore';
 import { useTaskStore } from '@/store/taskStore';
 import { useProjectStore } from '@/store/projectStore';
+import { useUIStore } from '@/store/uiStore';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -50,6 +51,7 @@ export default function KanbanPage() {
   const { user } = useAuthStore();
   const { tasks, fetchTasks, updateTaskStatus, completeTask } = useTaskStore();
   const { projects, fetchProjects } = useProjectStore();
+  const { setTaskModalOpen } = useUIStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   const sensors = useSensors(
@@ -259,7 +261,12 @@ export default function KanbanPage() {
                           {columnTasks.length}
                         </Badge>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setTaskModalOpen(true)}
+                      >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>

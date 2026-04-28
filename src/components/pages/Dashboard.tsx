@@ -36,6 +36,7 @@ import CalendarPage from './CalendarPage';
 import AnalyticsPage from './AnalyticsPage';
 import FocusPage from './FocusPage';
 import SettingsPage from './SettingsPage';
+import TaskModal from '@/components/TaskModal';
 
 type ViewType = 'dashboard' | 'kanban' | 'calendar' | 'analytics' | 'focus' | 'settings';
 
@@ -54,7 +55,7 @@ const VIEW_CONFIG: Record<
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const { tasks, isLoading, fetchTodayTasks, completeTask, deleteTask } = useTaskStore();
-  const { sidebarOpen, toggleSidebar, setSidebarOpen } = useUIStore();
+  const { sidebarOpen, toggleSidebar, setSidebarOpen, setTaskModalOpen } = useUIStore();
   const [view, setView] = useState<ViewType>('dashboard');
 
   useEffect(() => {
@@ -207,6 +208,7 @@ export default function Dashboard() {
   if (view !== 'dashboard' && VIEW_CONFIG[view]?.component) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+        <TaskModal />
         {/* Sidebar - Collapsed for full pages */}
         <aside
           className={`${
@@ -262,6 +264,7 @@ export default function Dashboard() {
   // Dashboard view
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+      <TaskModal />
       {/* Sidebar */}
       <aside
         className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300`}
@@ -403,14 +406,14 @@ export default function Dashboard() {
                 <input
                   type="text"
                   placeholder="Ajouter une tâche rapide..."
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      toast.info('Fonctionnalité à venir');
-                    }
-                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                  onClick={() => setTaskModalOpen(true)}
+                  readOnly
                 />
-                <Button className="bg-purple-600 hover:bg-purple-700">
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={() => setTaskModalOpen(true)}
+                >
                   <Plus className="w-5 h-5" />
                 </Button>
               </div>

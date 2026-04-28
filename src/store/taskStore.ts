@@ -1,6 +1,15 @@
 // Task Store - Zustand
 import { create } from 'zustand';
 import type { Task, TaskInput, TaskUpdate, TaskStatus } from '@/types';
+import { useAuthStore } from './authStore';
+
+function authHeaders(): Record<string, string> {
+  const token = useAuthStore.getState().accessToken;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 interface TaskState {
   // State
@@ -18,7 +27,7 @@ interface TaskState {
   updateTask: (id: string, data: TaskUpdate) => Promise<Task>;
   updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>;
   updateTaskPosition: (id: string, position: string) => Promise<void>;
-  completeTask: (id: string) => Promise<void>;
+  completeTask: (id: string) => Promise<{ task: Task; xpGained: number; newLevel: number; newStreak: number; newAchievements: string[] } | undefined>;
   deleteTask: (id: string) => Promise<void>;
   addSubtask: (taskId: string, title: string) => Promise<void>;
   toggleSubtask: (taskId: string, subtaskId: string) => Promise<void>;
@@ -47,9 +56,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       if (filters.search) params.append('search', filters.search);
 
       const res = await fetch(`/api/tasks?${params}`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders(),
       });
 
       if (!res.ok) throw new Error('Erreur lors du chargement des tâches');
@@ -66,7 +73,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   fetchTodayTasks: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch('/api/tasks/today');
+      const res = await fetch('/api/tasks/today', {
+        headers: authHeaders(),
+      });
       if (!res.ok) throw new Error('Erreur lors du chargement des tâches du jour');
 
       const data = await res.json();
@@ -81,7 +90,9 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   fetchTask: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`/api/tasks/${id}`);
+      const res = await fetch(`/api/tasks/${id}`, {
+        headers: authHeaders(),
+      });
       if (!res.ok) throw new Error('Erreur lors du chargement de la tâche');
 
       const data = await res.json();
@@ -101,7 +112,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch('/api/tasks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -127,7 +138,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -161,7 +172,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ status }),
       });
 
@@ -193,7 +204,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${id}/position`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ position }),
       });
 
@@ -223,7 +234,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${id}/complete`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
       });
 
       if (!res.ok) {
@@ -245,7 +256,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       const result = await res.json();
       if (result.success && result.data) {
         set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? result.data : t)),
+          tasks: state.tasks.map((t) => (t.id === id ? result.data.task : t)),
         }));
         return result.data;
       }
@@ -278,6 +289,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${id}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       });
 
       if (!res.ok) {
@@ -294,7 +306,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${taskId}/subtasks`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ title }),
       });
 
@@ -332,7 +344,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     try {
       const res = await fetch(`/api/tasks/${taskId}/subtasks/${subtaskId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
       });
 
       if (!res.ok) {
