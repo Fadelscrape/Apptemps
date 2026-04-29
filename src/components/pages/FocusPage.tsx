@@ -109,37 +109,44 @@ export default function FocusPage() {
     }, 600);
   }, [isSoundEnabled]);
 
+  // Tick — decrements timeLeft every second while not idle
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    if (state !== 'idle') {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Timer finished
-            if (state === 'work') {
-              setPomodorosCompleted((prev) => prev + 1);
-              playSound();
-
-              if (pomodorosCompleted + 1 >= 4) {
-                toast.success('4 pomodoros complétés ! Prenez une longue pause.');
-                return longBreakDuration * 60;
-              } else {
-                toast.success('Pomodoro terminé ! Prenez une pause.');
-                return breakDuration * 60;
-              }
-            } else {
-              toast.success('Pause terminée ! Retour au travail.');
-              return workDuration * 60;
-            }
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-
+    if (state === 'idle') return;
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
     return () => clearInterval(interval);
-  }, [state, pomodorosCompleted, workDuration, breakDuration, longBreakDuration, playSound]);
+  }, [state]);
+
+  // Session-end transitions — fires when timeLeft hits 0
+  useEffect(() => {
+    if (timeLeft !== 0 || state === 'idle') return;
+
+    playSound();
+
+    if (state === 'work') {
+      const newCount = pomodorosCompleted + 1;
+      setPomodorosCompleted(newCount);
+
+      if (newCount % 4 === 0) {
+        // Every 4 pomodoros → long break
+        setState('longBreak');
+        setTimeLeft(longBreakDuration * 60);
+        toast.success('4 pomodoros ! Longue pause méritée 🎉');
+      } else {
+        // Otherwise → short break
+        setState('break');
+        setTimeLeft(breakDuration * 60);
+        toast.success('Pomodoro terminé ! Pause courte ☕');
+      }
+    } else {
+      // break or longBreak ended → back to idle, ready for next pomodoro
+      setState('idle');
+      setTimeLeft(workDuration * 60);
+      toast.info('Pause terminée. Prêt pour le prochain pomodoro !');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft, state]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -148,33 +155,24 @@ export default function FocusPage() {
   };
 
   const handleStart = () => {
-    if (state === 'idle') {
-      if (!selectedTask) {
-        toast.info('Sélectionnez une tâche à accomplir');
-        return;
-      }
-      setState('work');
-      setTimeLeft(workDuration * 60);
-    } else if (state === 'break' || state === 'longBreak') {
-      setState('work');
-      setTimeLeft(workDuration * 60);
+    if (!selectedTask) {
+      toast.info('Sélectionnez une tâche à accomplir');
+      return;
     }
+    setState('work');
+    setTimeLeft(workDuration * 60);
   };
 
+  // Pause a work session → go back to idle (timer stops, time resets)
   const handlePause = () => {
-    if (state === 'work') {
-      setState('idle');
-    }
+    setState('idle');
+    setTimeLeft(workDuration * 60);
   };
 
-  const handleBreak = () => {
-    setState('break');
-    setTimeLeft(breakDuration * 60);
-  };
-
-  const handleLongBreak = () => {
-    setState('longBreak');
-    setTimeLeft(longBreakDuration * 60);
+  // Skip the current break and go straight to next work session
+  const handleSkipBreak = () => {
+    setState('work');
+    setTimeLeft(workDuration * 60);
   };
 
   const handleReset = () => {
@@ -236,7 +234,11 @@ export default function FocusPage() {
         </div>
 
         {/* Timer */}
-        <Card className="p-8 mb-6 bg-gradient-to-br from-purple-500 to-blue-500 text-white border-0">
+        <Card className={`p-8 mb-6 text-white border-0 transition-all duration-700 bg-gradient-to-br ${
+          state === 'break'     ? 'from-green-500 to-emerald-400' :
+          state === 'longBreak' ? 'from-amber-500 to-orange-400' :
+                                  'from-purple-500 to-blue-500'
+        }`}>
           <div className="text-center">
             <motion.div
               key={state}
@@ -275,32 +277,24 @@ export default function FocusPage() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-3 flex-wrap">
               <AnimatePresence mode="wait">
-                {state === 'idle' ? (
-                  <motion.div
-                    key="start"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                  >
+                {state === 'idle' && (
+                  <motion.div key="start" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
                     <Button
                       size="lg"
                       onClick={handleStart}
                       disabled={!selectedTask}
-                      className="bg-white text-purple-600 hover:bg-gray-100 px-8"
+                      className="bg-white text-purple-600 hover:bg-gray-100 px-8 disabled:opacity-50"
                     >
                       <Play className="w-5 h-5 mr-2" />
-                      Commencer
+                      {pomodorosCompleted > 0 ? 'Continuer' : 'Commencer'}
                     </Button>
                   </motion.div>
-                ) : (
-                  <motion.div
-                    key="pause"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                  >
+                )}
+
+                {state === 'work' && (
+                  <motion.div key="pause" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
                     <Button
                       size="lg"
                       onClick={handlePause}
@@ -308,6 +302,19 @@ export default function FocusPage() {
                     >
                       <Pause className="w-5 h-5 mr-2" />
                       Pause
+                    </Button>
+                  </motion.div>
+                )}
+
+                {(state === 'break' || state === 'longBreak') && (
+                  <motion.div key="skip" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+                    <Button
+                      size="lg"
+                      onClick={handleSkipBreak}
+                      className="bg-white text-green-600 hover:bg-gray-100 px-8"
+                    >
+                      <Play className="w-5 h-5 mr-2" />
+                      Reprendre le travail
                     </Button>
                   </motion.div>
                 )}
@@ -329,11 +336,7 @@ export default function FocusPage() {
                 onClick={() => setIsSoundEnabled(!isSoundEnabled)}
                 className="bg-transparent text-white border-white/50 hover:bg-white/10"
               >
-                {isSoundEnabled ? (
-                  <Volume2 className="w-5 h-5" />
-                ) : (
-                  <VolumeX className="w-5 h-5" />
-                )}
+                {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
               </Button>
             </div>
           </div>
