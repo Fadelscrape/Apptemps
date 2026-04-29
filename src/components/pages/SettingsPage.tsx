@@ -30,7 +30,7 @@ import type { UserPreferences } from '@/types';
 import { XP_LEVELS } from '@/types';
 
 export default function SettingsPage() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, setUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 
   // Profile
@@ -104,6 +104,13 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
+        // Sync the updated preferences into the auth store so other pages react immediately
+        if (user) {
+          setUser({
+            ...user,
+            preferences: { theme, pomodoroWork, pomodoroBreak, pomodoroLong, notificationsEnabled, soundEnabled },
+          });
+        }
         toast.success('Préférences enregistrées');
       } else {
         const data = await res.json();

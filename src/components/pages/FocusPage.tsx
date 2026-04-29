@@ -25,7 +25,7 @@ import type { Task } from '@/types';
 type PomodoroState = 'idle' | 'work' | 'break' | 'longBreak';
 
 export default function FocusPage() {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const { tasks, fetchTasks } = useTaskStore();
   const [state, setState] = useState<PomodoroState>('idle');
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes
@@ -44,6 +44,36 @@ export default function FocusPage() {
       fetchTasks();
     }
   }, [user, fetchTasks]);
+
+  // Sync from user preferences whenever they change (e.g. after saving in Settings)
+  // Only update when idle to avoid disrupting an active session
+  useEffect(() => {
+    if (user?.preferences && state === 'idle') {
+      setWorkDuration(user.preferences.pomodoroWork);
+      setBreakDuration(user.preferences.pomodoroBreak);
+      setLongBreakDuration(user.preferences.pomodoroLong);
+      setTimeLeft(user.preferences.pomodoroWork * 60);
+    }
+  }, [user?.preferences?.pomodoroWork, user?.preferences?.pomodoroBreak, user?.preferences?.pomodoroLong]);
+
+  const saveTimerPreferences = useCallback(async (work: number, brk: number, longBrk: number) => {
+    if (!user) return;
+    try {
+      await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...user.preferences,
+          pomodoroWork: work,
+          pomodoroBreak: brk,
+          pomodoroLong: longBrk,
+        }),
+      });
+      setUser({ ...user, preferences: { ...user.preferences, pomodoroWork: work, pomodoroBreak: brk, pomodoroLong: longBrk } });
+    } catch {
+      // silently fail — local state is already updated
+    }
+  }, [user, setUser]);
 
   const playSound = useCallback(() => {
     if (!isSoundEnabled) return;
@@ -372,6 +402,11 @@ export default function FocusPage() {
             <Bell className="w-5 h-5 text-purple-600" />
             Paramètres du timer
           </h3>
+          {state !== 'idle' && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+              Arrêtez le timer pour modifier les durées.
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">
@@ -380,7 +415,12 @@ export default function FocusPage() {
               <input
                 type="number"
                 value={workDuration}
-                onChange={(e) => setWorkDuration(Math.max(1, parseInt(e.target.value) || 25))}
+                onChange={(e) => {
+                  const val = Math.max(1, parseInt(e.target.value) || 25);
+                  setWorkDuration(val);
+                  setTimeLeft(val * 60);
+                  saveTimerPreferences(val, breakDuration, longBreakDuration);
+                }}
                 disabled={state !== 'idle'}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 disabled:opacity-50"
               />
@@ -392,7 +432,11 @@ export default function FocusPage() {
               <input
                 type="number"
                 value={breakDuration}
-                onChange={(e) => setBreakDuration(Math.max(1, parseInt(e.target.value) || 5))}
+                onChange={(e) => {
+                  const val = Math.max(1, parseInt(e.target.value) || 5);
+                  setBreakDuration(val);
+                  saveTimerPreferences(workDuration, val, longBreakDuration);
+                }}
                 disabled={state !== 'idle'}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 disabled:opacity-50"
               />
@@ -404,7 +448,11 @@ export default function FocusPage() {
               <input
                 type="number"
                 value={longBreakDuration}
-                onChange={(e) => setLongBreakDuration(Math.max(1, parseInt(e.target.value) || 15))}
+                onChange={(e) => {
+                  const val = Math.max(1, parseInt(e.target.value) || 15);
+                  setLongBreakDuration(val);
+                  saveTimerPreferences(workDuration, breakDuration, val);
+                }}
                 disabled={state !== 'idle'}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 disabled:opacity-50"
               />
