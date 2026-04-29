@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { useAuthStore } from '@/store/authStore';
 import { useTaskStore } from '@/store/taskStore';
 import { useUIStore } from '@/store/uiStore';
@@ -27,6 +28,7 @@ import {
   Moon,
   Zap,
   Trash2,
+  Pencil,
   FolderOpen,
 } from 'lucide-react';
 import { XP_LEVELS } from '@/types';
@@ -37,6 +39,7 @@ import FocusPage from './FocusPage';
 import SettingsPage from './SettingsPage';
 import ProjectsPage from './ProjectsPage';
 import TaskModal from '@/components/TaskModal';
+import CommandPalette from '@/components/CommandPalette';
 
 type ViewType = 'dashboard' | 'kanban' | 'calendar' | 'analytics' | 'focus' | 'projects' | 'settings';
 
@@ -56,7 +59,7 @@ const VIEW_CONFIG: Record<
 export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const { tasks, isLoading, fetchTodayTasks, completeTask, deleteTask } = useTaskStore();
-  const { sidebarOpen, toggleSidebar, setSidebarOpen, setTaskModalOpen } = useUIStore();
+  const { sidebarOpen, toggleSidebar, setSidebarOpen, setTaskModalOpen, setEditingTaskId, commandPaletteOpen, toggleCommandPalette, setCommandPaletteOpen } = useUIStore();
   const [view, setView] = useState<ViewType>('dashboard');
 
   useEffect(() => {
@@ -65,11 +68,26 @@ export default function Dashboard() {
     }
   }, [user, fetchTodayTasks]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        toggleCommandPalette();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleCommandPalette]);
+
   const handleComplete = async (taskId: string) => {
     try {
+      const task = tasks.find((t) => t.id === taskId);
       const result = await completeTask(taskId);
       if (result) {
         toast.success(`Tâche complétée ! +${result.xpGained} XP`);
+        if (task?.priority === 'urgent') {
+          confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Erreur');
@@ -192,14 +210,24 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleDelete(task.id)}
-            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-600"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setEditingTaskId(task.id); setTaskModalOpen(true); }}
+              className="text-gray-400 hover:text-purple-600 p-1.5"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleDelete(task.id)}
+              className="text-gray-400 hover:text-red-600 p-1.5"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
       </Card>
     </motion.div>
@@ -230,6 +258,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
         <TaskModal />
+        <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} setView={setView} />
         {/* Sidebar - Desktop only */}
         <aside className="hidden md:flex md:flex-col w-16 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300">
           <div className="p-4 border-b border-gray-200 dark:border-gray-800">
@@ -284,6 +313,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
       <TaskModal />
+      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} setView={setView} />
       {/* Sidebar - Desktop only */}
       <aside
         className={`hidden md:flex md:flex-col ${sidebarOpen ? 'md:w-64' : 'md:w-20'} bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300`}

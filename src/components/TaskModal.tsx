@@ -7,7 +7,7 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Save } from 'lucide-react';
 import type { TaskPriority, TaskStatus } from '@/types';
 
 const PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
@@ -30,8 +30,8 @@ interface TaskModalProps {
 }
 
 export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
-  const { taskModalOpen, setTaskModalOpen } = useUIStore();
-  const { createTask } = useTaskStore();
+  const { taskModalOpen, setTaskModalOpen, editingTaskId, setEditingTaskId } = useUIStore();
+  const { tasks, createTask, updateTask } = useTaskStore();
   const { projects, fetchProjects } = useProjectStore();
 
   const [title, setTitle] = useState('');
@@ -45,15 +45,31 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
   const [tags, setTags] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isEditing = !!editingTaskId;
+  const editingTask = editingTaskId ? tasks.find((t) => t.id === editingTaskId) : null;
+
   useEffect(() => {
     if (taskModalOpen) {
       fetchProjects();
-      setStatus(defaultStatus);
+      if (editingTask) {
+        setTitle(editingTask.title);
+        setDescription(editingTask.description || '');
+        setPriority(editingTask.priority);
+        setStatus(editingTask.status);
+        setDueDate(editingTask.dueDate ? new Date(editingTask.dueDate).toISOString().split('T')[0] : '');
+        setDueTime(editingTask.dueTime || '');
+        setEstimatedMinutes(editingTask.estimatedMinutes ? String(editingTask.estimatedMinutes) : '');
+        setProjectId(editingTask.projectId || '');
+        setTags(Array.isArray(editingTask.tags) ? editingTask.tags.join(', ') : '');
+      } else {
+        resetForm();
+      }
     }
-  }, [taskModalOpen, fetchProjects, defaultStatus]);
+  }, [taskModalOpen, editingTask]);
 
   const handleClose = () => {
     setTaskModalOpen(false);
+    setEditingTaskId(null);
     resetForm();
   };
 
@@ -75,7 +91,7 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
 
     setIsSubmitting(true);
     try {
-      await createTask({
+      const payload = {
         title: title.trim(),
         description: description.trim() || undefined,
         priority,
@@ -85,11 +101,18 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
         estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
         projectId: projectId || undefined,
         tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
-      });
-      toast.success('Tâche créée avec succès !');
+      };
+
+      if (isEditing && editingTaskId) {
+        await updateTask(editingTaskId, payload);
+        toast.success('Tâche mise à jour !');
+      } else {
+        await createTask(payload);
+        toast.success('Tâche créée avec succès !');
+      }
       handleClose();
     } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la création');
+      toast.error(error.message || 'Erreur');
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +122,6 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
     <AnimatePresence>
       {taskModalOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -108,7 +130,6 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
           />
 
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -116,11 +137,11 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl z-10">
                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-                  Nouvelle tâche
+                  {isEditing ? 'Modifier la tâche' : 'Nouvelle tâche'}
                 </h2>
                 <button
                   onClick={handleClose}
@@ -167,7 +188,7 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                         key={p.value}
                         type="button"
                         onClick={() => setPriority(p.value)}
-                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all border-2 ${
+                        className={`flex-1 py-2 px-2 sm:px-3 rounded-lg text-xs font-medium transition-all border-2 ${
                           priority === p.value
                             ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                             : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300'
@@ -180,8 +201,8 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                   </div>
                 </div>
 
-                {/* Status & Project row */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Status & Project */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
                       Statut
@@ -192,9 +213,7 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                       className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     >
                       {STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
+                        <option key={s.value} value={s.value}>{s.label}</option>
                       ))}
                     </select>
                   </div>
@@ -210,16 +229,14 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                     >
                       <option value="">Aucun projet</option>
                       {projects.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.emoji} {p.name}
-                        </option>
+                        <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
-                {/* Date & Time row */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Date & Time */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
                       Date d'échéance
@@ -245,8 +262,8 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                   </div>
                 </div>
 
-                {/* Estimated time & Tags row */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Duration & Tags */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 block">
                       Durée estimée (min)
@@ -277,12 +294,7 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleClose}
-                    className="flex-1"
-                  >
+                  <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
                     Annuler
                   </Button>
                   <Button
@@ -293,12 +305,12 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Création...
+                        {isEditing ? 'Mise à jour...' : 'Création...'}
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
-                        <Plus className="w-4 h-4" />
-                        Créer la tâche
+                        {isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        {isEditing ? 'Mettre à jour' : 'Créer la tâche'}
                       </span>
                     )}
                   </Button>

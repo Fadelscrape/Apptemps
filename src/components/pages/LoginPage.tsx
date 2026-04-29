@@ -31,6 +31,19 @@ export default function LoginPage() {
     confirmPassword: '',
   });
 
+  const getPasswordStrength = (pwd: string) => {
+    return [
+      pwd.length >= 8,
+      /[A-Z]/.test(pwd),
+      /[a-z]/.test(pwd),
+      /[0-9]/.test(pwd),
+      /[^A-Za-z0-9]/.test(pwd),
+    ];
+  };
+
+  const strengthCriteria = getPasswordStrength(registerData.password);
+  const strengthCount = strengthCriteria.filter(Boolean).length;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -232,9 +245,38 @@ export default function LoginPage() {
                   required
                   disabled={isLoading}
                 />
-                <p className="text-xs text-gray-500">
-                  Min. 8 caractères avec majuscule, minuscule, chiffre et caractère spécial
-                </p>
+                {registerData.password && (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <div
+                          key={level}
+                          className={`h-1.5 flex-1 rounded-full transition-colors ${
+                            strengthCount >= level
+                              ? strengthCount <= 2
+                                ? 'bg-red-500'
+                                : strengthCount <= 3
+                                ? 'bg-orange-400'
+                                : strengthCount <= 4
+                                ? 'bg-yellow-400'
+                                : 'bg-green-500'
+                              : 'bg-gray-200 dark:bg-gray-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {['8+ car.', 'Majuscule', 'Minuscule', 'Chiffre', 'Spécial'].map((label, i) => (
+                        <span
+                          key={label}
+                          className={`inline-block mr-2 ${strengthCriteria[i] ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}
+                        >
+                          {strengthCriteria[i] ? '✓' : '○'} {label}
+                        </span>
+                      ))}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
