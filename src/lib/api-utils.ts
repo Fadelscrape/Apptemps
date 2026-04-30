@@ -100,26 +100,15 @@ export function hashToken(token: string): string {
 }
 
 // ============ LexoRank for Task Ordering ============
+const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+
 export function generateLexoRank(after?: string, before?: string): string {
-  const BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  if (!after && !before) return 'a0';
+  if (!before) return incrementLexoRank(after || 'a0');
+  if (!after) return decrementLexoRank(before);
 
-  if (!after && !before) {
-    return 'a0';
-  }
-
-  if (!before) {
-    return incrementLexoRank(after || 'a0');
-  }
-
-  if (!after) {
-    return decrementLexoRank(before);
-  }
-
-  // Find a rank between after and before
   const mid = averageLexoRank(after, before);
   if (mid) return mid;
-
-  // If no space, shift all
   return after + '0';
 }
 
@@ -150,7 +139,7 @@ function decrementLexoRank(rank: string): string {
       chars[i] = BASE62[charIndex - 1];
       return chars.join('');
     }
-    chars[i] = BASE62.length - 1;
+    chars[i] = BASE62[BASE62.length - 1]; // fix: was assigning number instead of char
     i--;
   }
 
@@ -176,10 +165,7 @@ function averageLexoRank(after: string, before: string): string | null {
     }
   }
 
-  if (result <= after || result >= before) {
-    return null;
-  }
-
+  if (result <= after || result >= before) return null;
   return result;
 }
 
