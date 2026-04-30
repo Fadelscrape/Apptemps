@@ -21,6 +21,36 @@ interface AuthState {
   fetchUser: () => Promise<void>;
 }
 
+// Standalone fetch wrapper — auto-refreshes on 401, usable outside React components
+export async function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = useAuthStore.getState().accessToken;
+  const merged: RequestInit = {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
+  };
+
+  const res = await fetch(url, merged);
+
+  if (res.status === 401) {
+    // Token expired mid-session — try to refresh once
+    await useAuthStore.getState().refreshAccessToken();
+    const newToken = useAuthStore.getState().accessToken;
+    if (!newToken) return res; // refresh failed, return original 401
+
+    return fetch(url, {
+      ...merged,
+      headers: { ...merged.headers as Record<string, string>, Authorization: `Bearer ${newToken}` },
+    });
+  }
+
+  return res;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -124,7 +154,6 @@ export const useAuthStore = create<AuthState>()(
               user: data.data.user,
               isAuthenticated: true,
             });
-            return data.data.accessToken;
           } else {
             throw new Error('Refresh failed');
           }
@@ -135,7 +164,6 @@ export const useAuthStore = create<AuthState>()(
             accessToken: null,
             isAuthenticated: false,
           });
-          return null;
         }
       },
 
@@ -164,8 +192,9 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
+        // Do NOT persist accessToken — it expires in 15min and causes 401 on reload.
+        // The refresh cookie (7 days) handles session restoration instead.
         user: state.user,
-        accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

@@ -1,15 +1,7 @@
 // Project Store - Zustand
 import { create } from 'zustand';
 import type { Project, ProjectInput } from '@/types';
-import { useAuthStore } from './authStore';
-
-function authHeaders(): Record<string, string> {
-  const token = useAuthStore.getState().accessToken;
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import { fetchWithAuth } from './authStore';
 
 interface ProjectState {
   // State
@@ -42,7 +34,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProjects: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch('/api/projects', { headers: authHeaders() });
+      const res = await fetchWithAuth('/api/projects');
       if (!res.ok) throw new Error('Erreur lors du chargement des projets');
 
       const data = await res.json();
@@ -57,7 +49,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProject: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`/api/projects/${id}`, { headers: authHeaders() });
+      const res = await fetchWithAuth(`/api/projects/${id}`);
       if (!res.ok) throw new Error('Erreur lors du chargement du projet');
 
       const data = await res.json();
@@ -75,9 +67,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createProject: async (data) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch('/api/projects', {
+      const res = await fetchWithAuth('/api/projects', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -101,9 +92,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   updateProject: async (id, data) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch(`/api/projects/${id}`, {
+      const res = await fetchWithAuth(`/api/projects/${id}`, {
         method: 'PUT',
-        headers: authHeaders(),
         body: JSON.stringify(data),
       });
 
@@ -134,10 +124,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }));
 
     try {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: 'DELETE',
-        headers: authHeaders(),
-      });
+      const res = await fetchWithAuth(`/api/projects/${id}`, { method: 'DELETE' });
 
       if (!res.ok) {
         set({ projects: previousProjects });
