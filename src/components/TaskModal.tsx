@@ -7,8 +7,11 @@ import { useProjectStore } from '@/store/projectStore';
 import { useUIStore } from '@/store/uiStore';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { X, Plus, Save } from 'lucide-react';
-import type { TaskPriority, TaskStatus } from '@/types';
+import { X, Plus, Save, RefreshCw } from 'lucide-react';
+import type { TaskPriority, TaskStatus, RecurringRule } from '@/types';
+
+const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const FREQ_LABELS: Record<string, string> = { daily: 'jour(s)', weekly: 'semaine(s)', monthly: 'mois' };
 
 const PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
   { value: 'low', label: 'Faible', color: 'bg-gray-500' },
@@ -43,6 +46,11 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
   const [estimatedMinutes, setEstimatedMinutes] = useState('');
   const [projectId, setProjectId] = useState('');
   const [tags, setTags] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<RecurringRule['frequency']>('daily');
+  const [recurringInterval, setRecurringInterval] = useState(1);
+  const [recurringDaysOfWeek, setRecurringDaysOfWeek] = useState<number[]>([]);
+  const [recurringEndDate, setRecurringEndDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditing = !!editingTaskId;
@@ -61,6 +69,15 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
         setEstimatedMinutes(editingTask.estimatedMinutes ? String(editingTask.estimatedMinutes) : '');
         setProjectId(editingTask.projectId || '');
         setTags(Array.isArray(editingTask.tags) ? editingTask.tags.join(', ') : '');
+        if (editingTask.recurring) {
+          setIsRecurring(true);
+          setRecurringFrequency(editingTask.recurring.frequency);
+          setRecurringInterval(editingTask.recurring.interval);
+          setRecurringDaysOfWeek(editingTask.recurring.daysOfWeek || []);
+          setRecurringEndDate(editingTask.recurring.endDate ? new Date(editingTask.recurring.endDate).toISOString().split('T')[0] : '');
+        } else {
+          setIsRecurring(false);
+        }
       } else {
         resetForm();
       }
@@ -83,6 +100,11 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
     setEstimatedMinutes('');
     setProjectId('');
     setTags('');
+    setIsRecurring(false);
+    setRecurringFrequency('daily');
+    setRecurringInterval(1);
+    setRecurringDaysOfWeek([]);
+    setRecurringEndDate('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,6 +113,17 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
 
     setIsSubmitting(true);
     try {
+      const recurring: RecurringRule | undefined = isRecurring
+        ? {
+            frequency: recurringFrequency,
+            interval: recurringInterval,
+            ...(recurringFrequency === 'weekly' && recurringDaysOfWeek.length > 0
+              ? { daysOfWeek: recurringDaysOfWeek }
+              : {}),
+            ...(recurringEndDate ? { endDate: new Date(recurringEndDate) } : {}),
+          }
+        : undefined;
+
       const payload = {
         title: title.trim(),
         description: description.trim() || undefined,
@@ -101,6 +134,7 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
         estimatedMinutes: estimatedMinutes ? parseInt(estimatedMinutes) : undefined,
         projectId: projectId || undefined,
         tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
+        recurring,
       };
 
       if (isEditing && editingTaskId) {
@@ -290,6 +324,106 @@ export default function TaskModal({ defaultStatus = 'todo' }: TaskModalProps) {
                       className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
+                </div>
+
+                {/* Recurring */}
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setIsRecurring(!isRecurring)}
+                    className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors ${
+                      isRecurring
+                        ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4" />
+                      Tâche récurrente
+                    </span>
+                    <span className={`w-9 h-5 rounded-full transition-colors relative ${isRecurring ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${isRecurring ? 'left-4' : 'left-0.5'}`} />
+                    </span>
+                  </button>
+
+                  {isRecurring && (
+                    <div className="px-4 pb-4 pt-3 space-y-3 bg-purple-50/50 dark:bg-purple-900/10">
+                      {/* Frequency buttons */}
+                      <div className="flex gap-2">
+                        {(['daily', 'weekly', 'monthly'] as const).map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => setRecurringFrequency(f)}
+                            className={`flex-1 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+                              recurringFrequency === f
+                                ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                            }`}
+                          >
+                            {f === 'daily' ? 'Quotidien' : f === 'weekly' ? 'Hebdo' : 'Mensuel'}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Interval */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 dark:text-gray-400">Tous les</span>
+                        <input
+                          type="number"
+                          value={recurringInterval}
+                          onChange={(e) => setRecurringInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                          min="1"
+                          className="w-16 px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-center"
+                        />
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          {FREQ_LABELS[recurringFrequency]}
+                        </span>
+                      </div>
+
+                      {/* Days of week (weekly only) */}
+                      {recurringFrequency === 'weekly' && (
+                        <div className="flex gap-1">
+                          {DAYS.map((day, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() =>
+                                setRecurringDaysOfWeek((prev) =>
+                                  prev.includes(i) ? prev.filter((d) => d !== i) : [...prev, i]
+                                )
+                              }
+                              className={`flex-1 py-1 rounded text-xs font-medium transition-all ${
+                                recurringDaysOfWeek.includes(i)
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* End date */}
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                          Fin (optionnel)
+                        </label>
+                        <input
+                          type="date"
+                          value={recurringEndDate}
+                          onChange={(e) => setRecurringEndDate(e.target.value)}
+                          className="flex-1 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+                        />
+                        {recurringEndDate && (
+                          <button type="button" onClick={() => setRecurringEndDate('')} className="text-gray-400 hover:text-gray-600">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions */}

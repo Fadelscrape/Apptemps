@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { verifyToken, calculateXP, getLevel } from '@/lib/api-utils';
+import { verifyToken, calculateXP, getLevel, generateLexoRank } from '@/lib/api-utils';
 import { ACHIEVEMENTS } from '@/types';
+import type { RecurringRule } from '@/types';
+
+function getNextDueDate(base: Date, rule: RecurringRule): Date {
+  const next = new Date(base);
+  const interval = rule.interval || 1;
+
+  switch (rule.frequency) {
+    case 'daily':
+      next.setDate(next.getDate() + interval);
+      break;
+    case 'weekly':
+      next.setDate(next.getDate() + interval * 7);
+      break;
+    case 'monthly':
+      next.setMonth(next.getMonth() + interval);
+      break;
+    default:
+      next.setDate(next.getDate() + interval);
+  }
+  return next;
+}
 
 // PATCH /api/tasks/[id]/complete - Complete task with XP and streak
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -60,7 +81,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Calculate XP
-    const hasSubtasks = existingTask.subtasks && JSON.parse(existingTask.subtasks).length > 0;
+    const hasSubtasks = !!(existingTask.subtasks && JSON.parse(existingTask.subtasks).length > 0);
     const xpGained = calculateXP(existingTask.priority, hasSubtasks);
     const currentXP = user.xp + xpGained;
     const newLevel = getLevel(currentXP);
@@ -125,6 +146,48 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         achievements: JSON.stringify(newAchievements),
       },
     });
+
+    // If recurring, create the next occurrence automatically
+    const recurringConfig: RecurringRule | null = existingTask.recurring
+      ? JSON.parse(existingTask.recurring)
+      : null;
+
+    if (recurringConfig) {
+      const endDate = recurringConfig.endDate ? new Date(recurringConfig.endDate) : null;
+      const hasNotExpired = !endDate || endDate > new Date();
+
+      if (hasNotExpired) {
+        const baseDate = existingTask.dueDate ? new Date(existingTask.dueDate) : new Date();
+        const nextDue = getNextDueDate(baseDate, recurringConfig);
+
+        // Find last task to get a valid position
+        const lastTask = await db.task.findFirst({
+          where: { ownerId: payload.userId, status: 'todo', deletedAt: null },
+          orderBy: { position: 'desc' },
+        });
+
+        await db.task.create({
+          data: {
+            ownerId: existingTask.ownerId,
+            projectId: existingTask.projectId ?? null,
+            title: existingTask.title,
+            description: existingTask.description ?? null,
+            status: 'todo',
+            priority: existingTask.priority,
+            dueDate: nextDue,
+            dueTime: existingTask.dueTime ?? null,
+            estimatedMinutes: existingTask.estimatedMinutes ?? null,
+            tags: existingTask.tags ?? '',
+            position: generateLexoRank(lastTask?.position),
+            subtasks: '[]',
+            reminders: '[]',
+            recurring: existingTask.recurring,
+            xpReward: existingTask.xpReward,
+            notes: existingTask.notes ?? null,
+          },
+        });
+      }
+    }
 
     const formattedTask = {
       ...task,

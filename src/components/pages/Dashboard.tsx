@@ -30,6 +30,7 @@ import {
   Trash2,
   Pencil,
   FolderOpen,
+  RefreshCw,
 } from 'lucide-react';
 import { XP_LEVELS } from '@/types';
 import KanbanPage from './KanbanPage';
@@ -205,6 +206,12 @@ export default function Dashboard() {
               {task.estimatedMinutes && (
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
                   {task.estimatedMinutes} min
+                </span>
+              )}
+              {task.recurring && (
+                <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  {task.recurring.frequency === 'daily' ? 'Quotidien' : task.recurring.frequency === 'weekly' ? 'Hebdo' : 'Mensuel'}
                 </span>
               )}
             </div>
